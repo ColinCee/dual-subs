@@ -92,6 +92,10 @@ def merge(english_ass: str, lines: list[dict], names: dict[str, str]) -> str:
         else:
             alone.append((start, end, text))
 
+    for (
+        e
+    ) in dialogue:  # the release's hard breaks were set for the larger size; let lines wrap only when full
+        e[9] = re.sub(rf" *{re.escape(BS)}N *", " ", e[9])
     cn_tags = "{" + f"{BS}fn{CN_FONT}{BS}fs{size}{BS}i0{BS}b0" + "}"
     for i, texts in joined.items():  # dialogue holds the same lists as events, so this edits events
         dialogue[i][9] = cn_tags + "".join(texts) + "{" + f"{BS}r" + "}" + f"{BS}N" + dialogue[i][9]
