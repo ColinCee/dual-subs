@@ -35,6 +35,12 @@ def fix_names(text: str, names: dict[str, str]) -> str:
     return text
 
 
+def cap_repeats(text: str) -> str:
+    """Cut a character repeated more than three times to three: the model sometimes loops on a
+    sound (450 诶 in a row), which would fill the screen. Real stutters keep their feel."""
+    return re.sub(r"(.)\1{3,}", r"\1\1\1", text)
+
+
 def _is_dialogue(event: list[str]) -> bool:
     """Spoken lines, not signs: positioned text belongs to something on screen."""
     return not event[3].startswith("Sign") and f"{BS}pos" not in event[9] and f"{BS}move" not in event[9]
@@ -71,7 +77,10 @@ def merge(english_ass: str, lines: list[dict], names: dict[str, str]) -> str:
         flags=re.MULTILINE,
     )
 
-    chinese = [(float(ln["start"]), float(ln["end"]), fix_names(ln["text"], names).strip()) for ln in lines]
+    chinese = [
+        (float(ln["start"]), float(ln["end"]), cap_repeats(fix_names(ln["text"], names)).strip())
+        for ln in lines
+    ]
     chinese = [c for c in chinese if re.search(r"[一-鿿]", c[2])]  # drops English lyrics
     joined: dict[int, list[str]] = {}
     alone: list[tuple[float, float, str]] = []
