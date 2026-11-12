@@ -7,10 +7,11 @@ import tempfile
 from pathlib import Path
 
 MODELS = Path(os.environ.get("DUAL_SUBS_MODELS", "D:/models/fireredasr2s"))
+# Pinned commits: FireRed loads these checkpoints with pickle (torch.load, weights_only=False).
 HF_REPOS = {
-    "FireRedASR2-AED": "FireRedTeam/FireRedASR2-AED",
-    "FireRedVAD": "FireRedTeam/FireRedVAD",
-    "FireRedPunc": "FireRedTeam/FireRedPunc",
+    "FireRedASR2-AED": ("FireRedTeam/FireRedASR2-AED", "2304afed56eacfee6256dee5937ed22ffa0b64ec"),
+    "FireRedVAD": ("FireRedTeam/FireRedVAD", "7990aaccc6b7aec1e527743bd30201f2c4a03b8c"),
+    "FireRedPunc": ("FireRedTeam/FireRedPunc", "e448fd967f44182a1c323cc30f5d89f2400c28da"),
 }
 RATE = 16000
 CJK = re.compile(r"[\u4e00-\u9fff]")
@@ -20,9 +21,9 @@ class Transcriber:
     def __init__(self) -> None:
         from huggingface_hub import snapshot_download
 
-        for name, repo in HF_REPOS.items():
-            if not (MODELS / name).is_dir():
-                snapshot_download(repo, local_dir=MODELS / name)
+        for name, (repo, revision) in HF_REPOS.items():
+            # Every run, so an interrupted download is finished; files already present are skipped.
+            snapshot_download(repo, revision=revision, local_dir=MODELS / name)
 
         from fireredasr2s import FireRedAsr2System, FireRedAsr2SystemConfig
         from fireredasr2s.fireredasr2 import FireRedAsr2Config
@@ -63,13 +64,19 @@ class Transcriber:
         """Lines for one speech stretch; a stretch the timestamp steps choke on becomes one line."""
         uttid = f"s{int(start * 1000)}"
         try:
-            result = self.asr.transcribe([uttid], [(RATE, samples)])[0]
+            # FireRed logs a failed decode and returns no result; word alignment raises instead.
+            results = self.asr.transcribe([uttid], [(RATE, samples)])
         except RuntimeError:  # word alignment fails on long repetitive stretches, such as songs
+            results = []
+        if not results:
             self.asr.config.return_timestamp = False
             try:
-                result = self.asr.transcribe([uttid], [(RATE, samples)])[0]
+                results = self.asr.transcribe([uttid], [(RATE, samples)])
             finally:
                 self.asr.config.return_timestamp = True
+        if not results:
+            return []
+        result = results[0]
         text = result.get("text", "").strip()
         if not CJK.search(text):
             return []  # English lyrics and noise; the English track covers lyrics

@@ -5,8 +5,8 @@ subtitles, write a copy with the new track, then swap it in and move the origina
 """
 
 import argparse
+import hashlib
 import json
-import shutil
 import tempfile
 import urllib.request
 from collections import Counter
@@ -15,7 +15,12 @@ from pathlib import Path
 from dual_subs import ass, mkv
 
 CACHE = Path.home() / ".cache" / "dual-subs"
-FONT_URL = "https://github.com/notofonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Medium.otf"
+# Pinned and hashed: the font is attached to every file written into the library.
+FONT_URL = (
+    "https://github.com/notofonts/noto-cjk/raw/165c01b46ea533872e002e0785ff17e44f6d97d8"
+    "/Sans/SubsetOTF/SC/NotoSansSC-Medium.otf"
+)
+FONT_SHA256 = "7633f5a016d4dd95e685a69633d818aabc4644c4b08e26bd35b1b30c45ed5dda"
 
 
 def load_names(path: Path | None) -> dict[str, str]:
@@ -28,9 +33,13 @@ def load_names(path: Path | None) -> dict[str, str]:
 
 def font() -> Path:
     path = CACHE / "NotoSansSC-Medium.otf"
-    if not path.exists():
+    if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != FONT_SHA256:
         path.parent.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(FONT_URL, path)
+        with urllib.request.urlopen(FONT_URL, timeout=120) as r:
+            data = r.read()
+        if hashlib.sha256(data).hexdigest() != FONT_SHA256:
+            raise SystemExit(f"font download does not match its pinned hash: {FONT_URL}")
+        path.write_bytes(data)
     return path
 
 
@@ -43,6 +52,7 @@ def main() -> None:
     )
     args = p.parse_args()
     names, transcriber = load_names(args.names), None
+    args.backup.mkdir(parents=True, exist_ok=True)
 
     videos = [v for p in args.paths for v in (sorted(p.glob("*.mkv")) if p.is_dir() else [p])]
     for video in videos:
@@ -63,19 +73,29 @@ def main() -> None:
                 transcriber = Transcriber()
             cached.parent.mkdir(parents=True, exist_ok=True)
             lines = transcriber.lines(video, zh["index"])
-            cached.write_text(json.dumps(lines, ensure_ascii=False), encoding="utf-8")
+            partial = cached.with_suffix(".part")  # an interrupted write must not look like a transcript
+            partial.write_text(json.dumps(lines, ensure_ascii=False), encoding="utf-8")
+            partial.replace(cached)
         lines = json.loads(cached.read_text(encoding="utf-8"))
+        if not lines:
+            print(f"skip (no Chinese heard): {video.name}")
+            continue
 
+        if video.resolve().drive != args.backup.resolve().drive:
+            # Renames keep the swap instant; a cross-drive move leaves the episode missing from the
+            # library for minutes, and the media server may drop it with its watch state.
+            raise SystemExit(f"--backup must be on the same drive as {video}")
+        if (args.backup / video.name).exists():
+            raise SystemExit(f"a backup of {video.name} already exists in {args.backup}")
         dual = ass.merge(mkv.subtitle_text(video, en["index"]), lines, names)
-        args.backup.mkdir(parents=True, exist_ok=True)
         # Built in the backup folder: outside the library, so the media server never scans a half-written file.
         with tempfile.TemporaryDirectory(dir=args.backup) as tmp:
             ass_file, out = Path(tmp) / "dual.ass", Path(tmp) / video.name
             ass_file.write_text(dual, encoding="utf-8")
             mkv.write_dual(video, out, ass_file, font(), streams)
             check(video, out, streams)
-            shutil.move(video, args.backup / video.name)
-            shutil.move(out, video)
+            video.rename(args.backup / video.name)
+            out.rename(video)
         print(f"done: {video.name}")
 
 

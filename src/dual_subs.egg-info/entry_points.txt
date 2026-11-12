@@ -1,2 +1,0 @@
-[console_scripts]
-dual-subs = dual_subs.cli:main

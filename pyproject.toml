@@ -16,7 +16,7 @@ dependencies = [
 dual-subs = "dual_subs.cli:main"
 
 [dependency-groups]
-dev = ["ruff", "ty", "jiwer"]
+dev = ["ruff", "ty"]
 
 [tool.uv]
 package = true

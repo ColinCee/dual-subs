@@ -29,7 +29,7 @@ Measured on To Be Hero X E01, all dialogue (0:00 to 21:40), against Bilibili's o
 - Separating voices from music first (BS-RoFormer) helped Qwen3-ASR and Paraformer on a 90 s clip (11% to 7.5%, 12% to 8%) but made FireRed worse (6% to 7.5%).
 - "Extra" is left out of the headline: it is mostly speech Bilibili does not subtitle (嗯, 啊, background voices) and lines the capture missed.
 
-Answer key: Chrome stepped Bilibili's free E01 every 0.5 s and kept a crop of the subtitle band whenever its yellow text changed; RapidOCR read the crops; repeats were merged and times shifted 53.5 s to the local file.
+Answer key: Chrome stepped Bilibili's free E01 every 0.5 s and kept a crop of the subtitle band whenever its yellow text changed; RapidOCR read the crops; repeats were merged and times shifted 53.5 s to the local file. The key and the scripts are not kept (the key is Bilibili's subtitle text), so a rerun means capturing it again.
 
 ## Consequences
 
