@@ -85,8 +85,19 @@ def check(original: Path, out: Path, before: list[dict]) -> None:
     kinds = Counter(s["codec_type"] for s in after)
     if kinds != Counter(s["codec_type"] for s in before) + Counter(["subtitle", "attachment"]):
         raise SystemExit(f"stream mismatch in {out}: {kinds}")
-    forced = [s["index"] for s in mkv.of_type(after, "subtitle") if s["disposition"].get("forced")]
-    if forced != [s["index"] for s in mkv.of_type(before, "subtitle") if s["disposition"].get("forced")]:
+    defaults = [s for s in mkv.of_type(after, "subtitle") if s["disposition"].get("default")]
+    if len(defaults) != 1 or not mkv.has_dual(defaults):
+        raise SystemExit(f"dual track is not the one default subtitle in {out}")
+
+    def forced(streams: list[dict]) -> list[tuple]:
+        subs = mkv.of_type(streams, "subtitle")
+        return [
+            (s.get("tags", {}).get("language"), s.get("tags", {}).get("title"))
+            for s in subs
+            if s["disposition"].get("forced")
+        ]
+
+    if forced(after) != forced(before):
         raise SystemExit(f"forced flags changed in {out}")
     if abs(mkv.duration(original) - mkv.duration(out)) > 1:
         raise SystemExit(f"duration changed in {out}")

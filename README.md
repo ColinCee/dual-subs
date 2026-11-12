@@ -14,4 +14,6 @@ Per episode it:
 
 Episodes already done, or without Mandarin audio or English subtitles, are skipped. Re-running is safe.
 
-Needs an NVIDIA GPU, `ffmpeg` and `ffprobe` on PATH, and [uv](https://docs.astral.sh/uv/). Model weights (about 6 GB) download on first run to `D:/models/fireredasr2s`, or `DUAL_SUBS_MODELS`.
+Plex keeps each viewer's earlier subtitle pick for an episode over the new default, by track position. For episodes already watched, pick "中文 + English" once in Plex (or set it through Plex's `PUT /library/parts/{id}?subtitleStreamID=` API).
+
+Needs an NVIDIA GPU, `ffmpeg`, `ffprobe` and [MKVToolNix](https://mkvtoolnix.download/) (`winget install MoritzBunkus.MKVToolNix`), and [uv](https://docs.astral.sh/uv/). Model weights (about 6 GB) download on first run to `D:/models/fireredasr2s`, or `DUAL_SUBS_MODELS`.

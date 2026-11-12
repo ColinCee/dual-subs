@@ -1,11 +1,17 @@
-"""Read MKV streams with ffprobe and write the dual track into a copy with ffmpeg."""
+"""Read MKV streams with ffprobe and write the dual track into a copy with mkvmerge.
+
+mkvmerge, not ffmpeg: ffmpeg wrote the added track's packets at the end of the file, so Plex,
+which reads subtitles as it streams, showed none after a resume or seek.
+"""
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
 CHINESE = {"chi", "zho", "cmn"}
 DUAL_TITLE = "中文 + English"
+MKVMERGE = shutil.which("mkvmerge") or "C:/Program Files/MKVToolNix/mkvmerge.exe"
 
 
 def streams(mkv: Path) -> list[dict]:
@@ -73,38 +79,19 @@ def subtitle_text(mkv: Path, index: int) -> str:
 
 
 def write_dual(mkv: Path, out: Path, ass_file: Path, font: Path, all_streams: list[dict]) -> None:
-    """Copy every stream, add the dual track and its font, and make it and Mandarin audio the defaults."""
-    subs, audio = of_type(all_streams, "subtitle"), of_type(all_streams, "audio")
-    n_attach = len(of_type(all_streams, "attachment"))
+    """Copy every stream, add the dual track and its font, and make it and Mandarin audio the defaults.
+
+    Plex keeps a viewer's earlier track pick over these defaults; README.md says how to reset it.
+    """
     zh = mandarin_audio(all_streams)
-    cmd = [
-        "ffmpeg",
-        "-v",
-        "error",
-        "-y",
-        "-i",
-        str(mkv),
-        "-i",
-        str(ass_file),
-        "-map",
-        "0",
-        "-map",
-        "1",
-        "-c",
-        "copy",
-        "-attach",
-        str(font),
-        f"-metadata:s:t:{n_attach}",
-        "mimetype=font/otf",
-        f"-metadata:s:s:{len(subs)}",
-        "language=eng",
-        f"-metadata:s:s:{len(subs)}",
-        f"title={DUAL_TITLE}",
-        f"-disposition:s:{len(subs)}",
-        "default",
-    ]
-    for i, s in enumerate(subs):  # drop default but keep forced, so signs-only tracks still work
-        cmd += [f"-disposition:s:{i}", "forced" if s["disposition"].get("forced") else "0"]
-    for i, a in enumerate(audio):
-        cmd += [f"-disposition:a:{i}", "default" if a is zh else "0"]
-    subprocess.run([*cmd, str(out)], check=True)
+    # ffprobe's stream index is mkvmerge's track ID for MKV input; forced flags carry over untouched.
+    flags = [f"{s['index']}:0" for s in of_type(all_streams, "subtitle")]
+    flags += [f"{a['index']}:{int(a is zh)}" for a in of_type(all_streams, "audio")]
+    cmd = [MKVMERGE, "-q", "-o", str(out)]
+    for flag in flags:
+        cmd += ["--default-track-flag", flag]
+    cmd += [str(mkv), "--language", "0:eng", "--track-name", f"0:{DUAL_TITLE}"]
+    cmd += ["--default-track-flag", "0:1", str(ass_file)]
+    cmd += ["--attachment-name", font.name, "--attachment-mime-type", "font/otf", "--attach-file", str(font)]
+    if subprocess.run(cmd, check=False).returncode > 1:  # 1 means warnings only
+        raise SystemExit(f"mkvmerge failed on {mkv}")
