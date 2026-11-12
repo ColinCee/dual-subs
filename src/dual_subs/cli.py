@@ -1,7 +1,8 @@
 """dual-subs PATH...: give every MKV a default "中文 + English" subtitle track.
 
-Each episode: transcribe its Mandarin audio (cached), merge the Chinese lines into its English
-subtitles, write a copy with the new track, then swap it in and move the original to BACKUP.
+Each episode: transcribe its Mandarin audio, have Claude fix mishearings (both cached), merge the
+Chinese lines into its English subtitles, write a copy with the new track, then swap it in and
+move the original to BACKUP.
 """
 
 import argparse
@@ -10,9 +11,11 @@ import json
 import tempfile
 import urllib.request
 from collections import Counter
+from functools import partial
 from pathlib import Path
 
 from dual_subs import ass, mkv
+from dual_subs.proofread import proofread
 
 CACHE = Path.home() / ".cache" / "dual-subs"
 # Pinned and hashed: the font is attached to every file written into the library.
@@ -23,12 +26,31 @@ FONT_URL = (
 FONT_SHA256 = "7633f5a016d4dd95e685a69633d818aabc4644c4b08e26bd35b1b30c45ed5dda"
 
 
-def load_names(path: Path | None) -> dict[str, str]:
-    """Lines of `heard=correct`, e.g. `萧月清=潇月卿`; # starts a comment."""
+def load_names(path: Path | None) -> tuple[dict[str, str], list[str]]:
+    """Fixes from lines of `heard=correct` (`萧月清=潇月卿`), and the cast: every correct name plus
+    lines that are just a name. # starts a comment."""
     if path is None:
-        return {}
-    pairs = (line.split("#")[0].strip() for line in path.read_text(encoding="utf-8").splitlines())
-    return dict(p.split("=", 1) for p in pairs if p)
+        return {}, []
+    entries = [line.split("#")[0].strip() for line in path.read_text(encoding="utf-8").splitlines()]
+    fixes = dict(e.split("=", 1) for e in entries if "=" in e)
+    cast = [e for e in entries if e and "=" not in e]
+    return fixes, list(dict.fromkeys(cast + list(fixes.values())))
+
+
+def cached_json(path: Path, make) -> list[dict]:
+    """The JSON at path, made and saved first if missing; written whole or not at all."""
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_suffix(".part")
+        partial.write_text(json.dumps(make(), ensure_ascii=False), encoding="utf-8")
+        partial.replace(path)
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def show_title(video: Path) -> str:
+    """'To Be Hero X - S01E01 - NICE' from the library layout Show/Season NN/file."""
+    show = video.parent.parent.name if video.parent.name.lower().startswith("season") else video.parent.name
+    return f"{show}: {video.stem}"
 
 
 def font() -> Path:
@@ -51,7 +73,7 @@ def main() -> None:
         "--backup", type=Path, required=True, help="where originals go; keep it outside the library"
     )
     args = p.parse_args()
-    names, transcriber = load_names(args.names), None
+    (names, cast), transcriber = load_names(args.names), None
     args.backup.mkdir(parents=True, exist_ok=True)
 
     videos = [v for p in args.paths for v in (sorted(p.glob("*.mkv")) if p.is_dir() else [p])]
@@ -65,21 +87,22 @@ def main() -> None:
             print(f"skip (no {'Mandarin audio' if zh is None else 'English subtitles'}): {video.name}")
             continue
 
-        cached = CACHE / "transcripts" / f"{video.stem}.json"
-        if not cached.exists():
-            if transcriber is None:
-                from dual_subs.transcribe import Transcriber
+        transcript = CACHE / "transcripts" / f"{video.stem}.json"
+        if not transcript.exists() and transcriber is None:
+            from dual_subs.transcribe import Transcriber
 
-                transcriber = Transcriber()
-            cached.parent.mkdir(parents=True, exist_ok=True)
-            lines = transcriber.lines(video, zh["index"])
-            partial = cached.with_suffix(".part")  # an interrupted write must not look like a transcript
-            partial.write_text(json.dumps(lines, ensure_ascii=False), encoding="utf-8")
-            partial.replace(cached)
-        lines = json.loads(cached.read_text(encoding="utf-8"))
+            transcriber = Transcriber()
+        lines = cached_json(
+            transcript, partial(transcriber.lines, video, zh["index"]) if transcriber else list
+        )
         if not lines:
             print(f"skip (no Chinese heard): {video.name}")
             continue
+        english = mkv.subtitle_text(video, en["index"])
+        lines = cached_json(
+            CACHE / "proofread" / f"{video.stem}.json",
+            partial(proofread, lines, english, show_title(video), cast),
+        )
 
         if video.resolve().drive != args.backup.resolve().drive:
             # Renames keep the swap instant; a cross-drive move leaves the episode missing from the
@@ -87,7 +110,7 @@ def main() -> None:
             raise SystemExit(f"--backup must be on the same drive as {video}")
         if (args.backup / video.name).exists():
             raise SystemExit(f"a backup of {video.name} already exists in {args.backup}")
-        dual = ass.merge(mkv.subtitle_text(video, en["index"]), lines, names)
+        dual = ass.merge(english, lines, names)
         # Built in the backup folder: outside the library, so the media server never scans a half-written file.
         with tempfile.TemporaryDirectory(dir=args.backup) as tmp:
             ass_file, out = Path(tmp) / "dual.ass", Path(tmp) / video.name

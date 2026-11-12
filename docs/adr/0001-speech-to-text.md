@@ -12,7 +12,7 @@ Shortlisted from published Mandarin results: FireRedASR2 (AED 1B, LLM 8B), Qwen3
 
 ## Decision
 
-FireRedASR2-AED with FireRedVAD and FireRedPunc, on the raw audio.
+FireRedASR2-AED with FireRedVAD and FireRedPunc, on the raw audio, then a Claude proofread (`proofread.py`) that fixes mishearings using the English line and the cast list as context.
 
 Measured on To Be Hero X E01, all dialogue (0:00 to 21:40), against Bilibili's official Chinese subtitles: 418 lines, 3,430 characters.
 
@@ -28,6 +28,7 @@ Measured on To Be Hero X E01, all dialogue (0:00 to 21:40), against Bilibili's o
 - Decoding is deterministic: three runs on a 90 s clip gave identical text.
 - Separating voices from music first (BS-RoFormer) helped Qwen3-ASR and Paraformer on a 90 s clip (11% to 7.5%, 12% to 8%) but made FireRed worse (6% to 7.5%).
 - "Extra" is left out of the headline: it is mostly speech Bilibili does not subtitle (嗯, 啊, background voices) and lines the capture missed.
+- The proofread, on FireRed's output with the name fixes applied: 10.0% to 8.5-8.7% wrong or missed over three runs (wrong characters 179 to 130-137). Scored one edit at a time, 25-33 per run made a line better and none made one worse; the rest matched lines the key does not cover. About 40 s per episode.
 
 Answer key: Chrome stepped Bilibili's free E01 every 0.5 s and kept a crop of the subtitle band whenever its yellow text changed; RapidOCR read the crops; repeats were merged and times shifted 53.5 s to the local file. The key and the scripts are not kept (the key is Bilibili's subtitle text), so a rerun means capturing it again.
 
