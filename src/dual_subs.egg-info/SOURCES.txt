@@ -1,0 +1,8 @@
+pyproject.toml
+src/dual_subs/__init__.py
+src/dual_subs.egg-info/PKG-INFO
+src/dual_subs.egg-info/SOURCES.txt
+src/dual_subs.egg-info/dependency_links.txt
+src/dual_subs.egg-info/entry_points.txt
+src/dual_subs.egg-info/requires.txt
+src/dual_subs.egg-info/top_level.txt

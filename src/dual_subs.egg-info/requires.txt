@@ -1,0 +1,6 @@
+fireredasr2s
+huggingface-hub>=0.34
+kaldi-native-fbank
+peft>=0.13.2
+torch
+torchaudio
