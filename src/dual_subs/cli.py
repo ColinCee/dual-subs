@@ -8,6 +8,7 @@ move the original to BACKUP.
 import argparse
 import hashlib
 import json
+import subprocess
 import tempfile
 import urllib.request
 from collections import Counter
@@ -99,10 +100,15 @@ def main() -> None:
             print(f"skip (no Chinese heard): {video.name}")
             continue
         english = mkv.subtitle_text(video, en["index"])
-        lines = cached_json(
-            CACHE / "proofread" / f"{video.stem}.json",
-            partial(proofread, lines, english, show_title(video), cast),
-        )
+        try:
+            lines = cached_json(
+                CACHE / "proofread" / f"{video.stem}.json",
+                partial(proofread, lines, english, show_title(video), cast),
+            )
+        except (subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError) as e:
+            # Left for the next run rather than built unproofread: a built episode is skipped as done.
+            print(f"skip (proofread failed: {type(e).__name__}): {video.name}")
+            continue
 
         if video.resolve().drive != args.backup.resolve().drive:
             # Renames keep the swap instant; a cross-drive move leaves the episode missing from the

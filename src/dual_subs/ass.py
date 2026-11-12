@@ -41,6 +41,12 @@ def cap_repeats(text: str) -> str:
     return re.sub(r"(.)\1{3,}", r"\1\1\1", text)
 
 
+def plain(text: str) -> str:
+    """Text safe inside one ASS event: no override braces, escapes or line breaks. Chinese lines
+    come from models (a transcriber and Claude), so treat them as untrusted."""
+    return re.sub(r"[{}\\\x00-\x1f\x7f]", "", text)
+
+
 def _is_dialogue(event: list[str]) -> bool:
     """Spoken lines, not signs: positioned text belongs to something on screen."""
     return not event[3].startswith("Sign") and f"{BS}pos" not in event[9] and f"{BS}move" not in event[9]
@@ -78,7 +84,7 @@ def merge(english_ass: str, lines: list[dict], names: dict[str, str]) -> str:
     )
 
     chinese = [
-        (float(ln["start"]), float(ln["end"]), cap_repeats(fix_names(ln["text"], names)).strip())
+        (float(ln["start"]), float(ln["end"]), plain(cap_repeats(fix_names(ln["text"], names))).strip())
         for ln in lines
     ]
     chinese = [c for c in chinese if re.search(r"[一-鿿]", c[2])]  # drops English lyrics
