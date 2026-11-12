@@ -1,0 +1,35 @@
+[project]
+name = "dual-subs"
+version = "0.1.0"
+description = "Add a combined Chinese + English subtitle track to MKV episodes, transcribing the Mandarin audio"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "fireredasr2s",
+    "huggingface-hub>=0.34",
+    "kaldi-native-fbank",  # fireredasr2s imports it but does not declare it
+    "peft>=0.13.2",
+    "torch",
+    "torchaudio",
+]
+
+[project.scripts]
+dual-subs = "dual_subs.cli:main"
+
+[dependency-groups]
+dev = ["ruff", "ty"]
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+fireredasr2s = { git = "https://github.com/FireRedTeam/FireRedASR2S" }
+torch = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.ruff]
+line-length = 110

@@ -1,0 +1,12 @@
+# To Be Hero X (凸变英雄X): names the transcriber mishears, as heard=correct.
+# Spellings from Moegirl's character list; add pairs as new mishearings turn up.
+萧月清=潇月卿
+肖月清=潇月卿
+江月清=潇月卿
+萧月卿=潇月卿
+潇月清=潇月卿
+小野青=潇月卿
+萧雨晴=潇月卿
+萧玉清=潇月卿
+耐斯=奈斯
+启事揭发=启士揭发
