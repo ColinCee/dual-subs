@@ -1,6 +1,7 @@
 """Mandarin speech to timed Chinese lines with FireRedASR2S. Model choice: docs/adr/0001-speech-to-text.md."""
 
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -11,6 +12,8 @@ HF_REPOS = {
     "FireRedVAD": "FireRedTeam/FireRedVAD",
     "FireRedPunc": "FireRedTeam/FireRedPunc",
 }
+RATE = 16000
+CJK = re.compile(r"[\u4e00-\u9fff]")
 
 
 class Transcriber:
@@ -24,42 +27,63 @@ class Transcriber:
         from fireredasr2s import FireRedAsr2System, FireRedAsr2SystemConfig
         from fireredasr2s.fireredasr2 import FireRedAsr2Config
 
-        cfg = FireRedAsr2SystemConfig(
-            vad_model_dir=str(MODELS / "FireRedVAD/VAD"),
-            asr_model_dir=str(MODELS / "FireRedASR2-AED"),
-            punc_model_dir=str(MODELS / "FireRedPunc"),
-            # With timestamps the system splits each speech stretch into sentences;
-            # without them one line can run 15 s.
-            asr_config=FireRedAsr2Config(return_timestamp=True),
-            enable_lid=False,
+        system = FireRedAsr2System(
+            FireRedAsr2SystemConfig(
+                vad_model_dir=str(MODELS / "FireRedVAD/VAD"),
+                asr_model_dir=str(MODELS / "FireRedASR2-AED"),
+                punc_model_dir=str(MODELS / "FireRedPunc"),
+                # Word timestamps let punctuation split a speech stretch into sentences;
+                # without them one line can run 15 s.
+                asr_config=FireRedAsr2Config(return_timestamp=True),
+                enable_lid=False,
+            )
         )
-        self.system = FireRedAsr2System(cfg)
+        self.vad, self.asr, self.punc = system.vad, system.asr, system.punc
 
     def lines(self, mkv: Path, audio_index: int) -> list[dict]:
         """[{start, end, text}] in seconds for one audio stream of the file."""
+        import soundfile
+
         with tempfile.TemporaryDirectory() as tmp:
             wav = Path(tmp) / "audio.wav"
             subprocess.run(
-                [
-                    "ffmpeg",
-                    "-v",
-                    "error",
-                    "-i",
-                    str(mkv),
-                    "-map",
-                    f"0:{audio_index}",
-                    "-ac",
-                    "1",
-                    "-ar",
-                    "16000",
-                    "-c:a",
-                    "pcm_s16le",
-                    str(wav),
-                ],
+                ["ffmpeg", "-v", "error", "-i", str(mkv), "-map", f"0:{audio_index}"]
+                + ["-ac", "1", "-ar", str(RATE), "-c:a", "pcm_s16le", str(wav)],
                 check=True,
             )
-            result = self.system.process(str(wav))
-        return [
-            {"start": s["start_ms"] / 1000, "end": s["end_ms"] / 1000, "text": s["text"]}
-            for s in result["sentences"]
-        ]
+            audio, _ = soundfile.read(wav, dtype="int16")
+            stretches = self.vad.detect(str(wav))[0]["timestamps"]
+        out = []
+        for start, end in stretches:
+            out += self._stretch(start, end, audio[int(start * RATE) : int(end * RATE)])
+        return out
+
+    def _stretch(self, start: float, end: float, samples) -> list[dict]:
+        """Lines for one speech stretch; a stretch the timestamp steps choke on becomes one line."""
+        uttid = f"s{int(start * 1000)}"
+        try:
+            result = self.asr.transcribe([uttid], [(RATE, samples)])[0]
+        except RuntimeError:  # word alignment fails on long repetitive stretches, such as songs
+            self.asr.config.return_timestamp = False
+            try:
+                result = self.asr.transcribe([uttid], [(RATE, samples)])[0]
+            finally:
+                self.asr.config.return_timestamp = True
+        text = result.get("text", "").strip()
+        if not CJK.search(text):
+            return []  # English lyrics and noise; the English track covers lyrics
+        if result.get("timestamp"):
+            try:
+                sentences = self.punc.process_with_timestamp([result["timestamp"]], [uttid])[0][
+                    "punc_sentences"
+                ]
+            except AssertionError:  # its token matching breaks on mixed English and Chinese
+                sentences = []
+            if sentences:
+                lines = [
+                    {"start": start + s["start_s"], "end": start + s["end_s"], "text": s["punc_text"]}
+                    for s in sentences
+                ]
+                lines[0]["start"], lines[-1]["end"] = start, end
+                return lines
+        return [{"start": start, "end": end, "text": self.punc.process([text], [uttid])[0]["punc_text"]}]
