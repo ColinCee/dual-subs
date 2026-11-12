@@ -38,6 +38,7 @@ class Transcriber:
                 enable_lid=False,
             )
         )
+        assert system.vad is not None and system.punc is not None  # both enabled in the config above
         self.vad, self.asr, self.punc = system.vad, system.asr, system.punc
 
     def lines(self, mkv: Path, audio_index: int) -> list[dict]:
