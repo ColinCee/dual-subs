@@ -6,6 +6,7 @@ one English line, they take turns, each shown from when it is spoken. Chinese wi
 under it shows on its own, in the same spot.
 """
 
+import itertools
 import re
 from collections import Counter
 
@@ -67,22 +68,26 @@ def pieces(piece: Piece, limit: int) -> list[Piece]:
 
 
 def _turns(cue_start: float, cue_end: float, chinese: list[Piece], limit: int) -> list[Piece]:
-    """The English cue cut into turns, one per Chinese piece: each piece shows from when it is
-    spoken until the next one starts, inside the cue. A turn too short to read joins a neighbour
-    when the two fit in one row."""
-    starts = [cue_start] + [min(max(p[0], cue_start), cue_end) for p in chinese[1:]]
-    starts = [max(starts[: k + 1]) for k in range(len(starts))]  # never step back in time
-    ends = starts[1:] + [cue_end]
-    turns = [(s, e, p[2]) for s, e, p in zip(starts, ends, chinese, strict=True) if e > s]
-    merged: list[Piece] = []
-    for s, e, text in turns:
-        prev = merged[-1] if merged else None
-        short = e - s < MIN_TURN or (prev is not None and prev[1] - prev[0] < MIN_TURN)
-        if prev and short and len(prev[2]) + len(text) <= limit:
-            merged[-1] = (prev[0], e, prev[2] + text)
+    """The English cue cut into turns, one per row of Chinese, together covering the whole cue.
+    A row starts when it is spoken (the first at the cue start); when that leaves a row too short
+    to read, which happens when speech runs past the cue, the cue's time is shared by length."""
+    rows: list[str] = []
+    starts: list[float] = []
+    for p in chinese:  # rows too short to read on their own join a neighbour when they fit
+        if rows and len(rows[-1]) + len(p[2]) <= limit and (p[1] - p[0] < MIN_TURN or len(rows[-1]) < 4):
+            rows[-1] += p[2]
         else:
-            merged.append((s, e, text))
-    return merged
+            rows.append(p[2])
+            starts.append(p[0])
+    bounds = [cue_start] + [min(max(s, cue_start), cue_end) for s in starts[1:]] + [cue_end]
+    bounds = [max(bounds[: k + 1]) for k in range(len(bounds))]  # never step back in time
+    if any(b - a < MIN_TURN for a, b in itertools.pairwise(bounds)):
+        total, at = sum(map(len, rows)), cue_start
+        bounds = [cue_start]
+        for row in rows:
+            at += (cue_end - cue_start) * len(row) / total
+            bounds.append(at)
+    return [(a, b, row) for a, b, row in zip(bounds, bounds[1:], rows)]
 
 
 def _is_dialogue(event: list[str]) -> bool:
