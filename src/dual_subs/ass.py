@@ -1,20 +1,27 @@
 """Merge timed Chinese lines into an existing English ASS script as one dual-language track.
 
-Layout: Chinese pinned at the bottom, bottom-anchored English styles lifted above it. Both
-positions are fixed: letting the renderer stack overlapping lines swaps their order whenever the
-Chinese line starts before the English one.
+Layout, as in bilingual fansubs: each Chinese line joins the English line it overlaps most, as one
+event with the Chinese on top and the English smaller below, so both share the English timing.
+Chinese with no English line under it shows on its own, in the same spot.
 """
 
 import re
+from collections import Counter
 
 CN_FONT = "Noto Sans SC"
 CN_STYLE = "Chinese"
-MAX_CHARS = 20  # longer lines wrap to two rows and would run into the English above
+EN_SCALE = 0.8  # English shrinks so the Chinese reads first
+BS = "\\"
 
 
 def _ts(seconds: float) -> str:
     cs = round(seconds * 100)
     return f"{cs // 360000}:{cs // 6000 % 60:02d}:{cs // 100 % 60:02d}.{cs % 100:02d}"
+
+
+def _secs(ts: str) -> float:
+    h, m, s = ts.split(":")
+    return int(h) * 3600 + int(m) * 60 + float(s)
 
 
 def _play_res_y(script: str) -> int:
@@ -28,51 +35,58 @@ def fix_names(text: str, names: dict[str, str]) -> str:
     return text
 
 
-def split_long(line: dict) -> list[dict]:
-    """Split a long line at the punctuation nearest its middle, timing each part by its length."""
-    text = line["text"]
-    if len(text) <= MAX_CHARS:
-        return [line]
-    cuts = [i + 1 for i, ch in enumerate(text[:-1]) if ch in "，。？！、；：,.?!"]
-    cut = min(cuts, key=lambda i: abs(i - len(text) / 2)) if cuts else len(text) // 2
-    at = line["start"] + (line["end"] - line["start"]) * cut / len(text)
-    return split_long({"start": line["start"], "end": at, "text": text[:cut]}) + split_long(
-        {"start": at, "end": line["end"], "text": text[cut:]}
-    )
-
-
-def _lift_bottom_styles(script: str, lift: int) -> str:
-    def lift_style(m: re.Match) -> str:
-        fields = m.group(2).split(",")
-        if fields[18].strip() in ("1", "2", "3"):  # Alignment: bottom row
-            fields[21] = str(int(fields[21]) + lift)  # MarginV
-        return m.group(1) + ",".join(fields)
-
-    return re.sub(r"^(Style:\s*)(.*)$", lift_style, script, flags=re.MULTILINE)
+def _is_dialogue(event: list[str]) -> bool:
+    """Spoken lines, not signs: positioned text belongs to something on screen."""
+    return not event[3].startswith("Sign") and f"{BS}pos" not in event[9] and f"{BS}move" not in event[9]
 
 
 def merge(english_ass: str, lines: list[dict], names: dict[str, str]) -> str:
     res = _play_res_y(english_ass)
-    size, margin = round(res * 0.075), round(res * 0.04)
-    script = _lift_bottom_styles(english_ass, lift=round(size * 1.2))
-    style = (
-        f"Style: {CN_STYLE},{CN_FONT},{size},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,"
-        f"0,0,0,0,100,100,0,0,1,{max(1, round(res / 180))},1,2,10,10,{margin},1"
-    )
-    script = re.sub(
+    size = round(res * 0.075)
+    head, _, events_text = english_ass.partition("[Events]")
+    events = [ln.split(",", 9) for ln in events_text.splitlines() if ln.startswith("Dialogue:")]
+    dialogue = [e for e in events if _is_dialogue(e)]
+
+    styles = {}
+
+    def restyle(m: re.Match) -> str:
+        fields = m.group(2).split(",")
+        styles[fields[0]] = fields
+        if not fields[0].startswith("Sign"):
+            fields[2] = str(round(float(fields[2]) * EN_SCALE))  # Fontsize
+        return m.group(1) + ",".join(fields)
+
+    head = re.sub(r"^(Style:\s*)(.*)$", restyle, head, flags=re.MULTILINE)
+    main = styles.get(Counter(e[3] for e in dialogue).most_common(1)[0][0]) if dialogue else None
+    margin = main[21] if main else str(round(res * 0.05))
+    head = re.sub(
         r"(^\[V4\+ Styles\]\nFormat:[^\n]*\n)",
-        lambda m: m.group(1) + style + "\n",
-        script,
+        lambda m: (
+            m.group(1)
+            + f"Style: {CN_STYLE},{CN_FONT},{size},&H00FFFFFF,&H000000FF,&H00000000,&H64000000,"
+            + f"0,0,0,0,100,100,0,0,1,{max(1, round(res / 180))},1,2,10,10,{margin},1\n"
+        ),
+        head,
         count=1,
         flags=re.MULTILINE,
     )
-    events = []
-    for line in lines:
-        text = fix_names(line["text"], names).strip()
-        if not re.search(r"[一-鿿]", text):
-            continue  # English song lyrics and noise: the English track already covers lyrics
-        for part in split_long(dict(line, text=text)):
-            events.append(
-                f"Dialogue: 1,{_ts(part['start'])},{_ts(part['end'])},{CN_STYLE},,0,0,0,,{part['text']}"
-            )
-    return script.rstrip("\n") + "\n" + "\n".join(events) + "\n"
+
+    chinese = [(float(ln["start"]), float(ln["end"]), fix_names(ln["text"], names).strip()) for ln in lines]
+    chinese = [c for c in chinese if re.search(r"[一-鿿]", c[2])]  # drops English lyrics
+    joined: dict[int, list[str]] = {}
+    alone: list[tuple[float, float, str]] = []
+    for start, end, text in chinese:
+        overlaps = [(min(end, _secs(e[2])) - max(start, _secs(e[1])), i) for i, e in enumerate(dialogue)]
+        best, at = max(overlaps, default=(0.0, -1))
+        if best > 0:
+            joined.setdefault(at, []).append(text)
+        else:
+            alone.append((start, end, text))
+
+    cn_tags = "{" + f"{BS}fn{CN_FONT}{BS}fs{size}{BS}i0{BS}b0" + "}"
+    for i, texts in joined.items():  # dialogue holds the same lists as events, so this edits events
+        dialogue[i][9] = cn_tags + "".join(texts) + "{" + f"{BS}r" + "}" + f"{BS}N" + dialogue[i][9]
+    body = [",".join(e) for e in events]
+    body += [f"Dialogue: 0,{_ts(s)},{_ts(e)},{CN_STYLE},,0,0,0,,{t}" for s, e, t in alone]
+    fmt = "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"
+    return head.rstrip("\n") + "\n\n[Events]\n" + fmt + "\n" + "\n".join(body) + "\n"
