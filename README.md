@@ -12,6 +12,6 @@ Transcripts and proofread lines are cached in `~/.cache/dual-subs/transcripts` a
 
 Plex keeps each viewer's earlier subtitle pick for an episode over the new default. For episodes already watched, pick "中文 + English" once in Plex.
 
-The Plex iOS app shows ASS subtitles as plain text and drops the Chinese. On iPhone and iPad, set Burn Subtitles to Always in the app's settings so the server draws the track onto the video.
+On iPad the Plex app shows only the English of this track. Setting Burn Subtitles to Always in the app's settings shows both, since the server then draws the subtitles onto the video; it re-encodes the video whenever subtitles are on.
 
 Needs an NVIDIA GPU, `ffmpeg`, `ffprobe`, [MKVToolNix](https://mkvtoolnix.download/) (`winget install MoritzBunkus.MKVToolNix`), the signed-in `claude` CLI and [uv](https://docs.astral.sh/uv/). The first run downloads the model weights (about 6 GB, to `D:/models/fireredasr2s` or `DUAL_SUBS_MODELS`) and the Noto Sans SC font.
