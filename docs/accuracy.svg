@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="960" height="300" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <style>
+    .title { fill: #1f2328; font-size: 16px; font-weight: 600; }
+    .note { fill: #59636e; font-size: 13px; }
+    .n { fill: #1f2328; font-size: 14px; text-anchor: end; }
+    .nk { fill: #1f2328; font-size: 14px; font-weight: 600; text-anchor: end; }
+    .sub { fill: #59636e; font-size: 12px; text-anchor: end; }
+    .v { fill: #1f2328; font-size: 13px; }
+    .bg { fill: #8c959f; }
+    .bk { fill: #0969da; }
+    .axis { stroke: #d1d9e0; stroke-width: 1; }
+    @media (prefers-color-scheme: dark) {
+      .title, .n, .nk, .v { fill: #f0f6fc; }
+      .note, .sub { fill: #9198a1; }
+      .bg { fill: #656c76; }
+      .bk { fill: #4493f8; }
+      .axis { stroke: #3d444d; }
+    }
+  </style>
+  <text class="title" x="10" y="24">Chinese characters wrong or missed (lower is better)</text>
+  <text class="note" x="10" y="282">To Be Hero X E01, 3,430 characters, against Bilibili's official Chinese subtitles. Times on an RTX 4090.</text>
+  <line class="axis" x1="330" y1="44" x2="330" y2="258"/>
+  <text class="nk" x="320" y="68">dual-subs: FireRedASR2-AED + names + Claude</text>
+  <text class="sub" x="320" y="84">AED 115 s + proofread ~40 s</text>
+  <path class="bk" d="M330,55 H471.1 Q475.1,55 475.1,59 V69 Q475.1,73 471.1,73 H330 Z"/>
+  <text class="v" x="483.1" y="69">8.5–8.7%</text>
+  <text class="n" x="320" y="112">FireRedASR2-LLM (8B)</text>
+  <text class="sub" x="320" y="128">180 s per episode</text>
+  <path class="bg" d="M330,99 H499.8 Q503.8,99 503.8,103 V113 Q503.8,117 499.8,117 H330 Z"/>
+  <text class="v" x="511.8" y="113">10.3%</text>
+  <text class="n" x="320" y="156">FireRedASR2-AED (1B)</text>
+  <text class="sub" x="320" y="172">115 s per episode</text>
+  <path class="bg" d="M330,143 H508.2 Q512.2,143 512.2,147 V157 Q512.2,161 508.2,161 H330 Z"/>
+  <text class="v" x="520.2" y="157">10.8%</text>
+  <text class="n" x="320" y="200">Paraformer-large</text>
+  <text class="sub" x="320" y="216">12 s per episode</text>
+  <path class="bg" d="M330,187 H562.2 Q566.2,187 566.2,191 V201 Q566.2,205 562.2,205 H330 Z"/>
+  <text class="v" x="574.2" y="201">14.0%</text>
+  <text class="n" x="320" y="244">Qwen3-ASR-1.7B</text>
+  <text class="sub" x="320" y="260">32 s per episode</text>
+  <path class="bg" d="M330,231 H837.3 Q841.3,231 841.3,235 V245 Q841.3,249 837.3,249 H330 Z"/>
+  <text class="v" x="849.3" y="245">30.3%</text>
+</svg>

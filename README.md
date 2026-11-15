@@ -21,6 +21,12 @@ uv run dual-subs "E:/TV/My Show" --names names/my-show.txt --backup "E:/original
 
 It takes MKV episodes with Mandarin audio and full English subtitles, a season folder or single files. Originals move to `--backup`, which must be on the same drive. Re-running is safe: episodes already done are skipped.
 
+## Accuracy
+
+![Characters wrong or missed: dual-subs 8.5 to 8.7%, FireRedASR2-LLM 10.3%, FireRedASR2-AED 10.8%, Paraformer-large 14.0%, Qwen3-ASR-1.7B 30.3%](docs/accuracy.svg)
+
+The two FireRed models tie within the answer key's own errors, so dual-subs uses the smaller, faster one. About one character in twelve is still wrong, mostly same-sounding ones (他/她, 的/得) that no audio model can tell apart. One episode was measured; method and caveats in [docs/adr/0001-speech-to-text.md](docs/adr/0001-speech-to-text.md).
+
 ## Requirements
 
 Tested on Windows only.
