@@ -23,9 +23,9 @@ It takes MKV episodes with Mandarin audio and full English subtitles, a season f
 
 ## Accuracy
 
-![Characters wrong or missed: dual-subs 8.5 to 8.7%, FireRedASR2-LLM 10.3%, FireRedASR2-AED 10.8%, Paraformer-large 14.0%, Qwen3-ASR-1.7B 30.3%](docs/accuracy.svg)
+![Characters wrong or missed: dual-subs 8.5 to 8.7%, AED with name fixes 10.0%, FireRedASR2-LLM 10.3%, FireRedASR2-AED 10.8%, Paraformer-large 14.0%, Qwen3-ASR-1.7B 30.3%](docs/accuracy.svg)
 
-The two FireRed models tie within the answer key's own errors, so dual-subs uses the smaller, faster one. About one character in twelve is still wrong, mostly same-sounding ones (他/她, 的/得) that no audio model can tell apart. One episode was measured; method and caveats in [docs/adr/0001-speech-to-text.md](docs/adr/0001-speech-to-text.md).
+The two FireRed models tie within the answer key's own errors, so dual-subs uses the smaller, faster one. About one character in eleven is still wrong; most of what remains is likely same-sounding characters (他/她, 的/得) that no audio model can tell apart. One episode was measured; method and caveats in [docs/adr/0001-speech-to-text.md](docs/adr/0001-speech-to-text.md).
 
 ## Requirements
 
