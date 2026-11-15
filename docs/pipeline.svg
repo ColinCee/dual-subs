@@ -20,43 +20,33 @@
     </marker>
   </defs>
 
-  <!-- column 0: input episode, both rows -->
-  <rect class="box" x="10" y="30" width="150" height="180" rx="10"/>
-  <text class="t" x="85" y="114">Episode .mkv</text>
-  <text class="s" x="85" y="134">Mandarin audio,</text>
-  <text class="s" x="85" y="152">English subtitles</text>
+  <rect class="box" x="10" y="30" width="160" height="180" rx="10"/>
+  <text class="t" x="90" y="114">Episode .mkv</text>
+  <text class="s" x="90" y="134">Mandarin audio,</text>
+  <text class="s" x="90" y="152">English subtitles</text>
 
-  <!-- row 1: Chinese -->
-  <rect class="box" x="210" y="30" width="160" height="70" rx="10"/>
-  <text class="t" x="290" y="60">Transcribe</text>
-  <text class="s" x="290" y="80">FireRedASR2, GPU</text>
+  <rect class="box" x="230" y="30" width="190" height="70" rx="10"/>
+  <text class="t" x="325" y="60">Transcribe</text>
+  <text class="s" x="325" y="80">FireRedASR2, GPU</text>
 
-  <rect class="box" x="410" y="30" width="160" height="70" rx="10"/>
-  <text class="t" x="490" y="60">Fix with Claude</text>
-  <text class="s" x="490" y="80">reads the English too</text>
+  <rect class="box" x="230" y="140" width="190" height="70" rx="10"/>
+  <text class="t" x="325" y="170">English subtitles</text>
+  <text class="s" x="325" y="190">from the episode</text>
 
-  <!-- row 2: English -->
-  <rect class="box" x="210" y="140" width="360" height="70" rx="10"/>
-  <text class="t" x="390" y="170">English subtitles</text>
-  <text class="s" x="390" y="190">from the episode</text>
+  <rect class="box" x="480" y="30" width="240" height="180" rx="10"/>
+  <text class="t" x="600" y="96">Fix and merge</text>
+  <text class="s" x="600" y="118">Claude corrects the Chinese</text>
+  <text class="s" x="600" y="136">against the English line,</text>
+  <text class="s" x="600" y="154">then each pair is timed together</text>
 
-  <!-- column 3: merge, both rows -->
-  <rect class="box" x="620" y="30" width="140" height="180" rx="10"/>
-  <text class="t" x="690" y="114">Merge</text>
-  <text class="s" x="690" y="134">pairs lines</text>
-  <text class="s" x="690" y="152">by timing</text>
+  <rect class="key" x="780" y="30" width="170" height="180" rx="10"/>
+  <text class="t" x="865" y="114">Episode .mkv</text>
+  <text class="s" x="865" y="134">中文 + English</text>
+  <text class="s" x="865" y="152">track as default</text>
 
-  <!-- column 4: output -->
-  <rect class="key" x="800" y="30" width="150" height="180" rx="10"/>
-  <text class="t" x="875" y="114">Episode .mkv</text>
-  <text class="s" x="875" y="134">中文 + English</text>
-  <text class="s" x="875" y="152">track as default</text>
-
-  <path class="a" d="M160,65 H208"/>
-  <path class="a" d="M370,65 H408"/>
-  <path class="a" d="M570,65 H618"/>
-  <path class="a" d="M160,175 H208"/>
-  <path class="a" d="M570,175 H618"/>
-  <path class="a" d="M490,140 V102"/>
-  <path class="a" d="M760,120 H798"/>
+  <path class="a" d="M170,65 H228"/>
+  <path class="a" d="M170,175 H228"/>
+  <path class="a" d="M420,65 H478"/>
+  <path class="a" d="M420,175 H478"/>
+  <path class="a" d="M720,120 H778"/>
 </svg>
