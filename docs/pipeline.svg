@@ -38,7 +38,7 @@
   <!-- row 2: English -->
   <rect class="box" x="210" y="140" width="360" height="70" rx="10"/>
   <text class="t" x="390" y="170">English subtitles</text>
-  <text class="s" x="390" y="190">kept as they are</text>
+  <text class="s" x="390" y="190">kept, and given to the proofread</text>
 
   <!-- column 3: merge, both rows -->
   <rect class="box" x="620" y="30" width="140" height="180" rx="10"/>
