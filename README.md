@@ -7,7 +7,7 @@ Chinese and English subtitles on screen together, for shows that only ship Engli
 
 ![A subtitle with one row of Chinese above two rows of English](docs/example.png)
 
-![Episode audio is transcribed and proofread, then merged with the English subtitles into one new track](docs/pipeline.svg)
+![Episode audio is transcribed, Claude fixes it using the English subtitles, then both are merged with the English subtitles into one new track](docs/pipeline.svg)
 
 ## Quick start
 
