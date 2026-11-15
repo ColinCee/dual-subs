@@ -2,7 +2,7 @@
 name = "dual-subs"
 version = "0.1.0"
 description = "Add a combined Chinese + English subtitle track to MKV episodes, transcribing the Mandarin audio"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.15,<3.16"
 dependencies = [
     "fireredasr2s",
     "huggingface-hub>=0.34",
