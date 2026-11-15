@@ -35,6 +35,16 @@
         "digest"
       ],
       "minimumReleaseAge": "0 days"
+    },
+    {
+      "description": "The Python ceiling follows the torch and FireRed builds, so Renovate leaves requires-python alone.",
+      "matchDepNames": [
+        "python"
+      ],
+      "matchDepTypes": [
+        "requires-python"
+      ],
+      "enabled": false
     }
   ]
 }
