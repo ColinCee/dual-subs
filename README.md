@@ -16,13 +16,14 @@ lease run --name dual-subs --res gpu --for 7200 -- uv run dual-subs "E:/Plex/To 
 
 | Needs | Get it |
 |---|---|
-| An NVIDIA GPU with CUDA 12.8 drivers | |
+| An NVIDIA GPU, driver 570 or newer (CUDA 12.8) | [NVIDIA drivers](https://www.nvidia.com/en-us/drivers/) |
+| Git | `winget install Git.Git` |
 | [uv](https://docs.astral.sh/uv/) | `winget install astral-sh.uv` |
 | `ffmpeg` and `ffprobe` | `winget install Gyan.FFmpeg` |
 | [MKVToolNix](https://mkvtoolnix.download/) | `winget install MoritzBunkus.MKVToolNix` |
 | [Claude Code](https://docs.anthropic.com/en/docs/claude-code), signed in | `npm install -g @anthropic-ai/claude-code` |
 
-The first run downloads the [FireRedASR2](https://github.com/FireRedTeam/FireRedASR2S) weights (about 6 GB, to `D:/models/fireredasr2s` or `DUAL_SUBS_MODELS`) and the Noto Sans SC font.
+Tested on Windows only. Clone the repository and run from its root. The proofread runs `claude -p` on your own Claude login, so it uses your Claude usage; an episode whose proofread fails is skipped until the next run. The first run downloads the [FireRedASR2](https://github.com/FireRedTeam/FireRedASR2S) weights (about 6 GB, to `D:/models/fireredasr2s` or `DUAL_SUBS_MODELS`) and the Noto Sans SC font.
 
 ## How it works
 
@@ -31,7 +32,7 @@ Per episode:
 1. Transcribes the Mandarin audio (`src/dual_subs/transcribe.py`; why this model: [docs/adr/0001-speech-to-text.md](docs/adr/0001-speech-to-text.md)).
 2. Has Claude fix mishearings, using the English line and the show's cast list in `names/` (`proofread.py`).
 3. Merges the Chinese into the English subtitles (`ass.py`).
-4. Writes a checked copy with the new track as default, swaps it in and moves the original to `--backup` (`mkv.py`, `cli.py`).
+4. Writes a checked copy with the new track as default, swaps it in and moves the original to `--backup`, which must be on the same drive so the swap is instant (`mkv.py`, `cli.py`).
 
 Episodes already done, or without Mandarin audio or full English subtitles, are skipped, so re-running is safe. Transcripts and proofread lines are cached in `~/.cache/dual-subs/transcripts` and `proofread`, one per file name; delete one to redo that episode.
 
