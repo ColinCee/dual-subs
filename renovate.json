@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
   "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": false,
@@ -9,24 +12,29 @@
     "minimumReleaseAge": "0 days"
   },
   "lockFileMaintenance": {
-    "description": "pyproject.toml asks for ranges, so only a weekly lock refresh moves uv.lock to new releases.",
+    "description": "pyproject.toml asks for ranges, so only this weekly lock refresh moves uv.lock. Not auto-merged: it can move torch and FireRed, and no check runs the model.",
     "enabled": true,
-    "schedule": ["before 6am on monday"]
+    "automerge": false,
+    "schedule": [
+      "before 6am on monday"
+    ]
   },
   "packageRules": [
     {
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false
     },
     {
       "description": "Lock refreshes, pins and digests carry no release time, so the 3-day wait would hold them forever.",
-      "matchUpdateTypes": ["lockFileMaintenance", "pin", "pinDigest", "digest"],
+      "matchUpdateTypes": [
+        "lockFileMaintenance",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
       "minimumReleaseAge": "0 days"
-    },
-    {
-      "description": "torchaudio only works with the torch build of the same release.",
-      "groupName": "torch",
-      "matchPackageNames": ["torch", "torchaudio"]
     }
   ]
 }
